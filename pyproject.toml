@@ -8,6 +8,8 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.6"
 instaloader = "^4.2"
+Flask = "^1.1"
+Flask-API = "^1.1"
 
 [tool.poetry.dev-dependencies]
 
