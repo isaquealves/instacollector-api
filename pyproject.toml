@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "Gerenciagram-API"
+name = "Instacollector-API"
 version = "0.1.0"
 description = "A simple api that allows to gather information from instagram user profile and store it for later use"
 authors = ["Isaque Alves <isaquealves@gmail.com>"]
