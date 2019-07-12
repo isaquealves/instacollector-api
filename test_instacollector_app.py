@@ -9,6 +9,12 @@ import boto3
 from moto import mock_s3
 
 from app import create_app
+class MockProfile(object):
+    pass
+
+class MockFileObject(object):
+    def read(self):
+        return '{"sample": "sample file obj"}'.encode('utf-8')
 
 class InstacollectorTestCase(unittest.TestCase):
     """This class contains a group of tests for Instacollector
@@ -31,6 +37,13 @@ class InstacollectorTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_get_profile_from_s3(self):
-        with mock_s3():
-            response = self.client().get(f"/{self.instagram_user}/profile")
-            self.assertEqual(response.status_code, 200)
+        mock_profile = MockProfile()
+        mock_profile.username = 'test'
+        mock_profile.userid = '0089283'
+        with patch('boto3.resource'):
+            with patch('lzma.open') as lzma_mock:
+                with patch('instaloader.Profile.from_username') as mock_insta:
+                    mock_insta.return_value = mock_profile
+                    lzma_mock.return_value = MockFileObject()
+                    response = self.client().get(f"/{self.instagram_user}/profile_dl")
+                    self.assertEqual(response.status_code, 200)
