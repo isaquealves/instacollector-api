@@ -1,0 +1,7 @@
+instaloader
+Flask
+Flask-API
+python-dotenv
+boto3
+pytest
+pytest-pudb
