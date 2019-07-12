@@ -1,6 +1,7 @@
 import os
 import json
 import unittest
+import random
 
 from unittest.mock import patch
 import instaloader
@@ -47,3 +48,19 @@ class InstacollectorTestCase(unittest.TestCase):
                     lzma_mock.return_value = MockFileObject()
                     response = self.client().get(f"/{self.instagram_user}/profile_dl")
                     self.assertEqual(response.status_code, 200)
+
+    def test_get_single_post(self):
+        index = random.randint(0, 5)
+        mock_profile = MockProfile()
+        mock_profile.username = 'test'
+        mock_profile.userid = '0089283'
+
+        with patch('boto3.resource'):
+            with patch('app.blueprints.download_post_data_from_s3') as post_dl:
+                with patch('lzma.open') as lzma_mock:
+                    with patch('instaloader.Profile.from_username') as mock_insta:
+                        mock_insta.return_value = mock_profile
+                        lzma_mock.return_value = MockFileObject()
+                        post_dl.return_value = '{"test":{}}'
+                        response = self.client().get(f"/{self.instagram_user}/posts/{index}")
+                        self.assertEqual(response.status_code, 200)
