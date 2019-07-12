@@ -7,3 +7,10 @@ Bonus: if you make it work asynchronously.
 2. Endpoint to download a s3 post from a given profile by its index (for example, username = test and index = 0 would be the last post made by the profile);
  
 3. Endpoint to download s3 profile data (return json containing the data that the installer saves in the file).
+
+
+Application Setup
+=================
+
+Recommended way is to clone repository and use poetry do manage dependencies, but you can use `pip install -r requirements.txt`.
+
