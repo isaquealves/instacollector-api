@@ -20,6 +20,14 @@ def get_s3():
     """
     return boto3.resource('s3', region_name='us-east-1')
 
+def get_s3_client():
+    """ Gets the boto3 client which represents the S3 service
+
+    Returns:
+        client (S3.Client): The client instance
+    """
+    return boto3.client('s3')
+
 def bucket_exists(name):
     """Check if a bucket named 'name' exists
 
@@ -102,12 +110,46 @@ def upload_user_data(bucket_name: str, profile: Profile):
 
 
 def download_profile_data_from_s3(bucket_name: str, profile: Profile):
+    """Downloads profile data from s3
+
+    Args:
+        bucket_name (string): The S3 bucket name
+        profile (instaloader.Profile): The instagram's user profile data
+
+    Returns:
+        json object
+    """
     s3 = get_s3()
     bucket = s3.Bucket(bucket_name)
     s3_profile_key = f"{profile.username}/{profile.username}_{profile.userid}"
     _create_local_directory(profile)
     bucket.download_file(f"{s3_profile_key}.json.xz", f'{s3_profile_key}.json.xz')
     return lzma.open(f'{s3_profile_key}.json.xz').read().decode('utf-8')
+
+
+def download_post_data_from_s3(bucket_name: str, profile: Profile, post_index: int):
+    """ Downloads post data according to the given post index and profile
+
+    Args:
+        bucket_name (string): The bucket name
+        profile (instaloader.Profile): The user profile
+        post_index (integer): The index representing the post choosen to be shown
+    """
+    s3 = get_s3()
+    bucket = s3.Bucket(bucket_name)
+    post_list = []
+
+    for s3_object in bucket.objects.filter(Delimiter='/', Prefix=f'{profile.username}/'):
+       if ('UTC' in s3_object.key and not 'profile_pic' in s3_object.key and
+        s3_object.key.endswith('xz')):
+           item = s3_object.key.split('/')[1]
+           post_list.append(item)
+    post_list.reverse()
+
+    object_key = f'{profile.username}/{post_list[post_index]}'
+    bucket.download_file(f"{object_key}", f'{object_key}')
+    return lzma.open(f'{object_key}').read().decode('utf-8')
+
 
 
 

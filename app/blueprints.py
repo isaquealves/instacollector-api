@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import logging
 
 from flask import Blueprint, Response, abort, jsonify
@@ -9,14 +10,16 @@ from app.helpers import (
     collect_profile,
     save_data,
     upload_user_data,
-    download_profile_data_from_s3)
+    download_profile_data_from_s3,
+    download_post_data_from_s3)
 
 logger = logging.getLogger(__name__)
 
-loader = instaloader.Instaloader()
+loader = instaloader.Instaloader(download_comments=False)
 
 main_route = Blueprint('main', __name__)
 profile_dl = Blueprint('profile_dl_route', __name__)
+single_post_dl = Blueprint('spost_dl_route', __name__)
 
 bucket_name = os.getenv('S3_BUCKET', 'collectorusers')
 
@@ -41,4 +44,11 @@ def get_profile(instagram_user):
     return data
 
 
+@single_post_dl.route('/<string:instagram_user>/posts/<int:post_index>')
+def single_post_download(instagram_user, post_index):
 
+    profile = collect_profile(loader, instagram_user)
+    data = json.loads(download_post_data_from_s3(bucket_name,
+                                                 profile,
+                                                 post_index))
+    return data
