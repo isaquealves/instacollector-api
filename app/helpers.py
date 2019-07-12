@@ -1,6 +1,7 @@
 import os
 import logging
 from pathlib import Path
+import lzma
 from itertools import islice
 
 import boto3
@@ -30,27 +31,42 @@ def bucket_exists(name):
     return_dict = {
         '403': {
             'message': 'Bucket exists but access is forbidden',
-            'value': True
+            'value': (True, 'private')
         },
         '404': {
             'message': 'Bucket doesn\'t exists',
-            'value': False
+            'value': (False, 'non-existent')
         }
     }
     try:
         resource.meta.client.head_bucket(Bucket=name)
-        return True
+        return (True, 'accessible')
     except ClientError as error:
         error_code = error.response['Error']['Code']
         logger.info(return_dict[error_code]['message'])
         return return_dict[error_code]['value']
 
-def create_s3_bucket(name):
-    """ Creates a S3 bucket
+
+def create_or_get_s3_bucket(name):
+    """ Creates or obtain a S3 bucket
+
+    Args:
+        name (string): The bucket name
+
+    Returns:
+        boto3.resource.Bucket
+
+    Raises:
+        ClientError: if bucket is not accessible
+
     """
     resource = get_s3()
-    if not bucket_exists(name):
+    has_bucket = bucket_exists(name)
+    if 'non-existent' in has_bucket:
        return resource.create_bucket(Bucket=name)
+    if 'accessible' in has_bucket:
+        return resource.Bucket(name)
+
 
 def _create_local_directory(profile):
     """Creates local directory for a given profile
@@ -65,16 +81,6 @@ def _create_local_directory(profile):
     except:
         os.mkdir(profile.username)
 
-def remove_local_folder(profile):
-    """Removes the local folders related to user profiles"""
-    path = Path(profile.username)
-    for item in path.iterdir():
-        if item.is_dir():
-            remove_local_folder(item)
-        else:
-            item.unlink()
-        path.rmdir()
-
 def upload_user_data(bucket_name: str, profile: Profile):
     """Uploads downloaded user data from instagram
 
@@ -84,13 +90,25 @@ def upload_user_data(bucket_name: str, profile: Profile):
     """
 
     resource = get_s3()
-    bucket = create_s3_bucket(bucket_name)
+    bucket = create_or_get_s3_bucket(bucket_name)
     root_path = Path(profile.username)
 
     for path, subdirs, files in os.walk(root_path):
         for file in files:
             bucket.upload_file(root_path.resolve().joinpath(file).as_posix(),
-                               u.joinpath(file).as_posix())
+                               root_path.joinpath(file).as_posix())
+
+
+
+
+def download_profile_data_from_s3(bucket_name: str, profile: Profile):
+    s3 = get_s3()
+    bucket = s3.Bucket(bucket_name)
+    s3_profile_key = f"{profile.username}/{profile.username}_{profile.userid}"
+    _create_local_directory(profile)
+    bucket.download_file(f"{s3_profile_key}.json.xz", f'{s3_profile_key}.json.xz')
+    return lzma.open(f'{s3_profile_key}.json.xz').read().decode('utf-8')
+
 
 
 def collect_profile(instance: object, username: str):
